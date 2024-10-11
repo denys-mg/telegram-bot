@@ -1,0 +1,135 @@
+x-db-environments: &db-environments
+  SPRING_DATASOURCE_URL: ${POSTGRES_URL}
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+x-rabbit-environments: &rabbit-environments
+  SPRING_RABBITMQ_HOST: ${RABBITMQ_HOST}
+  SPRING_RABBITMQ_USER: ${RABBITMQ_USER}
+  SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+  SPRING_RABBITMQ_PORT: ${RABBITMQ_DOCKER_SERVER_PORT}
+
+x-mail-environments: &mail-environments
+  SPRING_MAIL_USERNAME: ${MAIL_SENDER_ACCOUNT_USERNAME}
+  SPRING_MAIL_PASSWORD: ${MAIL_SENDER_ACCOUNT_PASSWORD}
+
+x-tg-bot-environments: &bot-environments
+  BOT_NAME: ${BOT_NAME}
+  BOT_TOKEN: ${BOT_TOKEN}
+
+services:
+  db:
+    image: postgres:${POSTGRES_VERSION}
+    container_name: postgresql
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - ${POSTGRES_LOCAL_PORT}:${POSTGRES_DOCKER_PORT}
+    healthcheck:
+      test: pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    restart: always
+
+  liquibase:
+    image: liquibase/liquibase:${LIQUIBASE_VERSION}
+    container_name: liquibase
+    environment:
+      - LIQUIBASE_COMMAND_CHANGELOG_FILE=${LIQUIBASE_CHANGELOG_FILE_PATH}
+      - LIQUIBASE_COMMAND_URL=${POSTGRES_URL}
+      - LIQUIBASE_COMMAND_USERNAME=${POSTGRES_USER}
+      - LIQUIBASE_COMMAND_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - ./db-management/liquibase/changelog/:/liquibase/changelog
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: [ "liquibase", "--logLevel=info", "update" ]
+
+  rabbitmq:
+    build: ./common-rabbitmq
+    container_name: rabbitmq
+    ports:
+      - ${RABBITMQ_LOCAL_SERVER_PORT}:${RABBITMQ_DOCKER_SERVER_PORT}
+      - ${RABBITMQ_LOCAL_UI_PORT}:${RABBITMQ_DOCKER_UI_PORT}
+    healthcheck:
+      test: [ "CMD-SHELL", "rabbitmqctl status || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - rabbitmq-data:/var/lib/docker/volumes/rabbitmq-data/data
+    restart: always
+
+  dispatcher-service:
+    build:
+      context: ./
+      dockerfile: Dockerfile-dispatcher
+    container_name: dispatcher-service
+    environment:
+      <<: [*rabbit-environments, *bot-environments]
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    expose:
+      - ${DISPATCHER_DOCKER_PORT}
+    restart: on-failure
+
+  node-service:
+    build:
+      context: ./
+      dockerfile: Dockerfile-node
+    container_name: node-service
+    environment:
+      <<: [*rabbit-environments, *db-environments, *bot-environments]
+      SERVICE_MAIL_URL: ${MAIL_SERVICE_URL}
+      SERVICE_REST_URL: ${REST_SERVICE_URL}
+    depends_on:
+      liquibase:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    expose:
+      - ${NODE_DOCKER_PORT}
+    restart: on-failure
+
+  mail-service:
+    build:
+      context: ./
+      dockerfile: Dockerfile-mail-service
+    container_name: mail-service
+    environment:
+      <<: *mail-environments
+      SERVICE_REST_URL: ${REST_SERVICE_URL}
+    ports:
+      - ${MAIL_LOCAL_PORT}:${MAIL_DOCKER_PORT}
+    restart: on-failure
+
+  rest-service:
+    build:
+      context: ./
+      dockerfile: Dockerfile-rest-service
+    container_name: rest-service
+    environment:
+      <<: [*rabbit-environments, *db-environments]
+    depends_on:
+      liquibase:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - ${REST_LOCAL_PORT}:${REST_DOCKER_PORT}
+    restart: on-failure
+
+volumes:
+  db-data:
+  rabbitmq-data:

@@ -1,0 +1,39 @@
+server:
+  port: 8085
+
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: user
+    password: pass
+
+  datasource:
+    url: jdbc:postgresql://localhost:5400/telega-db
+    username: user
+    password: pass
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    show-sql: true
+
+bot:
+  token: YOUR_BOT_TOKEN
+
+  api:
+    file-info-request:
+      link: https://api.telegram.org/bot{token}/getFile?file_id={fileId}
+    file-storage:
+      link: https://api.telegram.org/file/bot{token}/{filePath}
+
+service:
+  mail:
+    url: http://127.0.0.1:8087
+    activation-endpoint: /mail/send/activation
+
+  rest:
+    url: http://127.0.0.1:8086
+
+salt: SqjZCDGxDAgciec80fpSTYSfhq8cOq

@@ -1,0 +1,23 @@
+server:
+  port: 8086
+
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: user
+    password: pass
+
+  datasource:
+    url: jdbc:postgresql://localhost:5400/telega-db
+    username: user
+    password: pass
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    show-sql: true
+
+salt: SqjZCDGxDAgciec80fpSTYSfhq8cOq

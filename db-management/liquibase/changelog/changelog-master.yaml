@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - include:
+      file: changelog/changeset/create-table-raw_data.sql
+  - include:
+      file: changelog/changeset/create-table-app_user.sql
+  - include:
+      file: changelog/changeset/create-table-binary_content.sql
+  - include:
+      file: changelog/changeset/create-table-app_doc.sql
+  - include:
+      file: changelog/changeset/create-table-app_photo.sql

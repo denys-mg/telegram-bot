@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>Mail activation template</title>
+  <style>
+    .message__title {
+      color: #be2020;
+      text-align: center;
+      background-color: #f2dede;
+      padding: 1em;
+      border-radius: 8px;
+    }
+
+    .message__content {
+      display: flex;
+      margin: 2em;
+    }
+
+    .message__content img {
+      width: 15em;
+      height: 15em;
+      border-radius: 50%;
+      margin-right: 2em;
+    }
+
+    .message__content p {
+      font-size: 1.5em;
+      color: #000;
+      margin-bottom: 1em;
+    }
+
+    .message__activation-form button {
+      background-color: #8c564b;
+      color: #FFF;
+      border: none;
+      padding: 0.8em 1.5em;
+      border-radius: 5px;
+      font-size: 1em;
+      cursor:pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .message__activation-form button:hover {
+      background-color: #c38477;
+    }
+  </style>
+</head>
+<body>
+  <section class="message">
+    <h1 class="message__title" th:text="#{title}"></h1>
+    <div class="message__content">
+      <img src="cid:logo.jpg" th:alt="#{logo}" />
+
+      <div>
+        <p th:text="#{subtitle}"></p>
+        <form class="message__activation-form" th:action="${activationLink}" method="POST">
+          <button type="submit" th:text="#{btn.submit.text}"></button>
+        </form>
+      </div>
+    </div>
+  </section>
+</body>
+</html>

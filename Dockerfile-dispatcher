@@ -1,0 +1,32 @@
+FROM maven:3.8.7-eclipse-temurin-17-alpine AS build
+
+WORKDIR /app/parent-pom
+COPY pom.xml ./
+COPY checkstyle.xml ./
+RUN mvn clean install -N
+
+WORKDIR /app/dependencies-pom/rabbitmq
+COPY common-rabbitmq/pom.xml ./
+COPY common-rabbitmq/src ./src
+COPY checkstyle.xml ./
+RUN mvn clean install
+
+WORKDIR /app
+COPY dispatcher/pom.xml ./
+COPY dispatcher/src ./src
+COPY checkstyle.xml ./
+RUN mvn clean package
+
+FROM eclipse-temurin:17-jre AS jar_extract
+WORKDIR /app
+ARG JAR_FILE=./target/*.jar
+COPY --from=build /app/${JAR_FILE} ./dispatcher.jar
+RUN java -Djarmode=layertools -jar dispatcher.jar extract
+
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+COPY --from=jar_extract app/dependencies/ ./
+COPY --from=jar_extract app/spring-boot-loader/ ./
+COPY --from=jar_extract app/snapshot-dependencies/ ./
+COPY --from=jar_extract app/application/ ./
+ENTRYPOINT ["java", "org.springframework.boot.loader.JarLauncher"]
